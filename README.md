@@ -48,14 +48,21 @@ npm run typecheck
 
 ## 🗄️ Настройка Supabase
 
+**Подробная инструкция**: см. [SETUP.md](./SETUP.md)
+
+### Краткая инструкция:
+
 1. Создайте проект на [supabase.com](https://supabase.com)
-2. Выполните SQL-миграцию из `supabase/migrations/001_initial_schema.sql`
-3. Скопируйте `.env.example` в `.env` и заполните:
+2. Скопируйте **Project URL** и **anon key** из Settings → API
+3. Создайте файл `.env` в корне проекта:
 
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
+
+4. Выполните SQL-миграцию из `supabase/migrations/001_initial_schema.sql` в SQL Editor
+5. Запустите `npm run dev`
 
 ## 🚀 Деплой
 

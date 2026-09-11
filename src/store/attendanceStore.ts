@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import * as api from '../lib/supabase';
 import type { AttendanceRecord, AttendanceStatus, AbsenceReason, UndoAction } from '../types';
 
 interface AttendanceState {
@@ -26,8 +26,13 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
   fetchRecords: async (userId: string, month?: string) => {
     set({ isLoading: true });
-    const records = await supabase.getAttendance(userId, month);
-    set({ records, isLoading: false });
+    try {
+      const records = await api.getAttendance(userId, month);
+      set({ records, isLoading: false });
+    } catch (error) {
+      console.error('Ошибка загрузки записей:', error);
+      set({ isLoading: false });
+    }
   },
 
   markAttendance: async (userId, date, status, reason, minutes, note) => {
@@ -58,14 +63,28 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     });
 
     // Persist
-    await supabase.upsertAttendance({
-      user_id: userId,
-      date,
-      status,
-      absence_reason: reason || null,
-      late_minutes: minutes || null,
-      note: note || null,
-    });
+    try {
+      await api.upsertAttendance({
+        user_id: userId,
+        date,
+        status,
+        absence_reason: reason || null,
+        late_minutes: minutes || null,
+        note: note || null,
+      });
+    } catch (error) {
+      console.error('Ошибка сохранения:', error);
+      // Откатить optimistic update
+      set((state) => ({
+        records: state.records.filter(r => r.date !== date || (previousRecord && r.id === previousRecord.id)),
+      }));
+      if (previousRecord) {
+        set((state) => ({
+          records: [...state.records.filter(r => r.date !== date), previousRecord],
+        }));
+      }
+      return;
+    }
 
     // Setup undo
     const timeoutId = setTimeout(() => {
@@ -109,7 +128,20 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     });
 
     // Persist
-    await supabase.upsertRange(userId, dates, status, reason || undefined, minutes || undefined, note || undefined);
+    try {
+      for (const date of dates) {
+        await api.upsertAttendance({
+          user_id: userId,
+          date,
+          status,
+          absence_reason: reason || null,
+          late_minutes: minutes || null,
+          note: note || null,
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка сохранения диапазона:', error);
+    }
   },
 
   clearRecord: async (userId, date) => {
@@ -120,7 +152,18 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       records: state.records.filter(r => r.date !== date),
     }));
 
-    await supabase.deleteAttendance(userId, date);
+    try {
+      await api.deleteAttendance(userId, date);
+    } catch (error) {
+      console.error('Ошибка удаления:', error);
+      // Откатить
+      if (previousRecord) {
+        set((state) => ({
+          records: [...state.records, previousRecord],
+        }));
+      }
+      return;
+    }
 
     const timeoutId = setTimeout(() => {
       set({ undoAction: null });
@@ -128,7 +171,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
     set({
       undoAction: {
-        id: `clear_${date}`,
+        id: date,
         previousRecord,
         timeoutId,
       },
@@ -179,7 +222,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         return { records: newRecords, undoAction: null };
       });
       // Persist
-      supabase.upsertAttendance(undoAction.previousRecord);
+      api.upsertAttendance(undoAction.previousRecord).catch(console.error);
     } else {
       // Remove the record that was just created
       const actionId = undoAction.id;
@@ -187,7 +230,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         records: state.records.filter(r => r.date !== actionId),
         undoAction: null,
       }));
-      supabase.deleteAttendance('', actionId);
+      api.deleteAttendance('', actionId).catch(console.error);
     }
   },
 

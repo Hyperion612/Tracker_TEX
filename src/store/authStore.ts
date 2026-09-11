@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
+import { supabase, getCurrentProfile, updateProfile as apiUpdateProfile } from '../lib/supabase';
 import type { UserProfile } from '../types';
 
 interface AuthState {
@@ -21,9 +21,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
-      const user = await supabase.auth.getSession();
-      set({ user, isLoading: false });
-    } catch {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await getCurrentProfile();
+        set({ user: profile, isLoading: false });
+      } else {
+        set({ user: null, isLoading: false });
+      }
+    } catch (error) {
+      console.error('Ошибка инициализации:', error);
       set({ user: null, isLoading: false });
     }
   },
@@ -31,10 +37,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      const { user } = await supabase.auth.signInWithPassword({ email, password });
-      set({ user, isLoading: false });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      
+      if (data.user) {
+        const profile = await getCurrentProfile();
+        set({ user: profile, isLoading: false });
+      } else {
+        set({ user: null, isLoading: false });
+      }
     } catch (err) {
-      set({ error: (err as Error).message, isLoading: false });
+      const message = err instanceof Error ? err.message : 'Ошибка входа';
+      set({ error: message, isLoading: false });
       throw err;
     }
   },
@@ -42,14 +56,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (email: string, password: string, fullName: string, groupName: string) => {
     set({ isLoading: true, error: null });
     try {
-      const { user } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName, group_name: groupName } },
+        options: {
+          data: { full_name: fullName, group_name: groupName },
+        },
       });
-      set({ user, isLoading: false });
+      if (error) throw error;
+      
+      if (data.user) {
+        const profile = await getCurrentProfile();
+        set({ user: profile, isLoading: false });
+      } else {
+        set({ user: null, isLoading: false });
+      }
     } catch (err) {
-      set({ error: (err as Error).message, isLoading: false });
+      const message = err instanceof Error ? err.message : 'Ошибка регистрации';
+      set({ error: message, isLoading: false });
       throw err;
     }
   },
@@ -62,7 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   updateProfile: async (updates: Partial<UserProfile>) => {
     const { user } = get();
     if (!user) return;
-    const updated = await supabase.updateProfile(user.id, updates);
+    const updated = await apiUpdateProfile(user.id, updates);
     set({ user: updated });
   },
 

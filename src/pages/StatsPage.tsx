@@ -4,14 +4,13 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import { TrendingUp, Calendar, Clock, XCircle, Target, Flame } from 'lucide-react';
 import { useAttendanceStore } from '../store/attendanceStore';
 import { useAuthStore } from '../store/authStore';
-import { supabase } from '../lib/supabase';
+import { ABSENCE_REASONS } from '../lib/supabase';
 import { getAbsenceReasonLabel, cn } from '../lib/utils';
 import type { AttendanceStats, AttendanceRecord } from '../types';
 
 function useStats(): AttendanceStats {
   const { records } = useAttendanceStore();
   const { user } = useAuthStore();
-  const absenceReasons = supabase.getAbsenceReasons();
 
   return useMemo(() => {
     const now = new Date();

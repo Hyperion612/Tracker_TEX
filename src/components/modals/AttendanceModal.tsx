@@ -8,7 +8,7 @@ import { Button } from '../ui/Button';
 import { cn, getAbsenceReasonLabel } from '../../lib/utils';
 import { useAttendanceStore } from '../../store/attendanceStore';
 import { useAuthStore } from '../../store/authStore';
-import { supabase } from '../../lib/supabase';
+import { ABSENCE_REASONS } from '../../lib/supabase';
 import type { AttendanceStatus, AbsenceReason } from '../../types';
 
 interface AttendanceModalProps {
@@ -34,7 +34,7 @@ export function AttendanceModal({ isOpen, onClose, date }: AttendanceModalProps)
   const { user } = useAuthStore();
 
   const isRangeMode = selectedDates.length > 1;
-  const absenceReasons = supabase.getAbsenceReasons();
+  const absenceReasons = ABSENCE_REASONS;
 
   // Load existing record
   useEffect(() => {

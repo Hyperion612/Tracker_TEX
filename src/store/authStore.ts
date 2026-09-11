@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { supabase, getCurrentProfile, updateProfile as apiUpdateProfile } from '../lib/supabase';
+import { supabase, getCurrentProfile, createProfile, updateProfile as apiUpdateProfile } from '../lib/supabase';
 import type { UserProfile } from '../types';
 
 interface AuthState {
@@ -63,10 +63,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           data: { full_name: fullName, group_name: groupName },
         },
       });
-      if (error) throw error;
+      
+      if (error) {
+        throw new Error(getReadableAuthError(error));
+      }
       
       if (data.user) {
-        const profile = await getCurrentProfile();
+        // Пробуем получить профиль (созданный триггером)
+        let profile = await getCurrentProfile();
+        
+        // Если профиль не создан (триггер не сработал), создаём вручную
+        if (!profile) {
+          console.log('Профиль не создан триггером, создаём вручную...');
+          profile = await createProfile(data.user.id, email, fullName, groupName);
+        }
+        
         set({ user: profile, isLoading: false });
       } else {
         set({ user: null, isLoading: false });
@@ -92,3 +103,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+/** Преобразовать ошибку авторизации в читаемое сообщение */
+function getReadableAuthError(error: { message: string; status?: number }): string {
+  const msg = error.message.toLowerCase();
+  
+  if (msg.includes('user already') || msg.includes('already registered')) {
+    return 'Пользователь с таким email уже существует';
+  }
+  if (msg.includes('invalid login credentials')) {
+    return 'Неверный email или пароль';
+  }
+  if (msg.includes('email not confirmed')) {
+    return 'Email не подтверждён. Проверьте почту';
+  }
+  if (msg.includes('database error')) {
+    return 'Ошибка базы данных. Проверьте SQL миграцию';
+  }
+  if (msg.includes('password')) {
+    return 'Пароль должен быть не менее 6 символов';
+  }
+  
+  return error.message || 'Ошибка авторизации';
+}

@@ -3,18 +3,16 @@ import type { AttendanceRecord, UserProfile, AbsenceReasonItem } from '../types'
 
 // =============================================
 // Подключение к реальному Supabase
-// Переменные берутся из .env (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
 // =============================================
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    '⚠️ Supabase не настроен! Создайте файл .env в корне проекта и добавьте:\n' +
+  console.warn(
+    '⚠️ Supabase не настроен! Создайте файл .env и добавьте:\n' +
     'VITE_SUPABASE_URL=https://ваш-проект.supabase.co\n' +
-    'VITE_SUPABASE_ANON_KEY=ваш-anon-ключ\n\n' +
-    'Использую localStorage как fallback.'
+    'VITE_SUPABASE_ANON_KEY=ваш-anon-ключ'
   );
 }
 
@@ -37,7 +35,7 @@ export const ABSENCE_REASONS: AbsenceReasonItem[] = [
 ];
 
 // =============================================
-// Хелперы для работы с данными
+// Работа с профилем
 // =============================================
 
 /** Получить профиль текущего пользователя */
@@ -49,11 +47,63 @@ export async function getCurrentProfile(): Promise<UserProfile | null> {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error('Ошибка получения профиля:', error);
+    return null;
+  }
+
   return data as unknown as UserProfile;
 }
+
+/** Создать профиль вручную (fallback если триггер не сработал) */
+export async function createProfile(userId: string, email: string, fullName: string, groupName: string): Promise<UserProfile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      email,
+      full_name: fullName || 'Студент',
+      group_name: groupName || 'Не указана',
+    }, {
+      onConflict: 'id',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Ошибка создания профиля:', error);
+    throw new Error(getReadableError(error));
+  }
+
+  return data as unknown as UserProfile;
+}
+
+/** Обновить профиль */
+export async function updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      full_name: updates.full_name,
+      group_name: updates.group_name,
+      admission_threshold: updates.admission_threshold,
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Ошибка обновления профиля:', error);
+    throw new Error(getReadableError(error));
+  }
+
+  return data as unknown as UserProfile;
+}
+
+// =============================================
+// Работа с посещаемостью
+// =============================================
 
 /** Получить записи посещаемости */
 export async function getAttendance(userId: string, month?: string): Promise<AttendanceRecord[]> {
@@ -71,7 +121,10 @@ export async function getAttendance(userId: string, month?: string): Promise<Att
   }
 
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) {
+    console.error('Ошибка загрузки посещаемости:', error);
+    return [];
+  }
   return (data || []) as unknown as AttendanceRecord[];
 }
 
@@ -92,7 +145,11 @@ export async function upsertAttendance(record: Partial<AttendanceRecord> & { use
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Ошибка сохранения посещаемости:', error);
+    throw new Error(getReadableError(error));
+  }
+
   return data as unknown as AttendanceRecord;
 }
 
@@ -104,27 +161,16 @@ export async function deleteAttendance(userId: string, date: string): Promise<vo
     .eq('user_id', userId)
     .eq('date', date);
 
-  if (error) throw error;
+  if (error) {
+    console.error('Ошибка удаления записи:', error);
+    throw new Error(getReadableError(error));
+  }
 }
 
-/** Обновить профиль */
-export async function updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({
-      full_name: updates.full_name,
-      group_name: updates.group_name,
-      admission_threshold: updates.admission_threshold,
-    })
-    .eq('id', userId)
-    .select()
-    .single();
+// =============================================
+// Realtime
+// =============================================
 
-  if (error) throw error;
-  return data as unknown as UserProfile;
-}
-
-/** Подписка на realtime изменения в attendance */
 export function subscribeToAttendance(userId: string, callback: (payload: { eventType: string; new: AttendanceRecord; old: AttendanceRecord }) => void) {
   return supabase
     .channel('attendance-changes')
@@ -147,7 +193,37 @@ export function subscribeToAttendance(userId: string, callback: (payload: { even
     .subscribe();
 }
 
+// =============================================
+// Утилиты
+// =============================================
+
 /** Проверка что Supabase настроен */
 export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://placeholder.supabase.co');
+}
+
+/** Преобразовать ошибку Supabase в читаемое сообщение */
+function getReadableError(error: { message: string; code?: string }): string {
+  const msg = error.message.toLowerCase();
+  
+  if (msg.includes('duplicate') || error.code === '23505') {
+    return 'Запись уже существует';
+  }
+  if (msg.includes('row-level security') || msg.includes('rls')) {
+    return 'Нет доступа. Проверьте настройки RLS в Supabase';
+  }
+  if (msg.includes('relation') && msg.includes('does not exist')) {
+    return 'Таблица не найдена. Выполните SQL миграцию';
+  }
+  if (msg.includes('invalid') && msg.includes('email')) {
+    return 'Некорректный email';
+  }
+  if (msg.includes('password')) {
+    return 'Пароль должен быть не менее 6 символов';
+  }
+  if (msg.includes('check')) {
+    return 'Данные не соответствуют требованиям';
+  }
+  
+  return error.message || 'Ошибка базы данных';
 }

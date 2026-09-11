@@ -129,7 +129,6 @@ CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
 AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, full_name, group_name)
@@ -148,6 +147,38 @@ $$;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ============================================
+-- RPC функция для ручного создания профиля (fallback)
+-- Вызывается из клиента если триггер не сработал
+-- ============================================
+CREATE OR REPLACE FUNCTION create_profile_rpc(
+  p_id UUID,
+  p_email TEXT,
+  p_full_name TEXT DEFAULT 'Студент',
+  p_group_name TEXT DEFAULT 'Не указана'
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, group_name)
+  VALUES (
+    p_id,
+    p_email,
+    COALESCE(p_full_name, 'Студент'),
+    COALESCE(p_group_name, 'Не указана')
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET 
+    full_name = COALESCE(p_full_name, profiles.full_name),
+    group_name = COALESCE(p_group_name, profiles.group_name);
+END;
+$$;
+
+-- Даём право вызова всем аутентифицированным пользователям
+GRANT EXECUTE ON FUNCTION create_profile_rpc TO authenticated;
 
 -- ============================================
 -- Триггеры для updated_at

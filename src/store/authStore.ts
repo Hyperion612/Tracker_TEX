@@ -69,12 +69,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
       
       if (data.user) {
+        // Ждём немного чтобы сессия полностью установилась
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Пробуем получить профиль (созданный триггером)
         let profile = await getCurrentProfile();
         
         // Если профиль не создан (триггер не сработал), создаём вручную
         if (!profile) {
           console.log('Профиль не создан триггером, создаём вручную...');
+          // Ждём ещё немного перед созданием
+          await new Promise(resolve => setTimeout(resolve, 500));
           profile = await createProfile(data.user.id, email, fullName, groupName);
         }
         

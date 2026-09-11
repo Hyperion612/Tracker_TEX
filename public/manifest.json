@@ -1,0 +1,26 @@
+{
+  "name": "Трекер посещаемости техникума",
+  "short_name": "Трекер",
+  "description": "Отслеживайте посещаемость, статистику и прогресс",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='48' fill='%233b82f6'/%3E%3Cpath d='M140 68v40M52 68l48-24 48 24-48 24z' fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M72 80v32c18 18 54 18 72 0v-32' fill='none' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%233b82f6'/%3E%3Cpath d='M376 184v104M136 184l128-64 128 64-128 64z' fill='none' stroke='white' stroke-width='20' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M192 216v84c48 48 144 48 192 0v-84' fill='none' stroke='white' stroke-width='20' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "lang": "ru"
+}

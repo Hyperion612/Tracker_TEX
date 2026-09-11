@@ -4,11 +4,16 @@ import { Undo2 } from 'lucide-react';
 import { useAttendanceStore } from '../store/attendanceStore';
 import { Calendar } from '../components/calendar/Calendar';
 import { AttendanceModal } from '../components/modals/AttendanceModal';
+import { HomeworkSidebar } from '../components/homework/HomeworkSidebar';
+import { useHomeworkNotifications } from '../hooks/useHomeworkNotifications';
 
 export function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { undoAction, performUndo } = useAttendanceStore();
+  
+  // Включаем уведомления о домашних заданиях
+  useHomeworkNotifications();
 
   const handleDayClick = (date: string) => {
     setSelectedDate(date);
@@ -29,7 +34,17 @@ export function CalendarPage() {
         </p>
       </div>
 
-      <Calendar onDayClick={handleDayClick} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Календарь */}
+        <div className="lg:col-span-2">
+          <Calendar onDayClick={handleDayClick} />
+        </div>
+
+        {/* Боковая панель с домашними заданиями */}
+        <div className="lg:col-span-1">
+          <HomeworkSidebar />
+        </div>
+      </div>
 
       <AttendanceModal
         isOpen={isModalOpen}

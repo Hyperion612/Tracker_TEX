@@ -1,11 +1,12 @@
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CalendarDays, BarChart3, Settings, LogOut, GraduationCap } from 'lucide-react';
+import { CalendarDays, BarChart3, Settings, LogOut, GraduationCap, BookOpen } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { cn } from '../../lib/utils';
 
 const NAV_ITEMS = [
   { to: '/', icon: CalendarDays, label: 'Календарь' },
+  { to: '/homework', icon: BookOpen, label: 'Домашняя работа' },
   { to: '/stats', icon: BarChart3, label: 'Статистика' },
   { to: '/settings', icon: Settings, label: 'Настройки' },
 ];

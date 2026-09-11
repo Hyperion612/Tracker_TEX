@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { AttendanceRecord, UserProfile, AbsenceReasonItem } from '../types';
+import type { AttendanceRecord, UserProfile, AbsenceReasonItem, Homework } from '../types';
 
 // =============================================
 // Ключи localStorage для хранения настроек
@@ -309,6 +309,90 @@ export async function deleteAttendance(userId: string, date: string): Promise<vo
 }
 
 // =============================================
+// Работа с домашними заданиями
+// =============================================
+
+export async function getHomework(userId: string): Promise<Homework[]> {
+  return withRetry(async () => {
+    const { data, error } = await getSupabase()
+      .from('homework')
+      .select('*')
+      .eq('user_id', userId)
+      .order('due_date', { ascending: true });
+
+    if (error) {
+      console.error('Ошибка загрузки домашних заданий:', error);
+      return [];
+    }
+    return (data || []) as unknown as Homework[];
+  });
+}
+
+export async function createHomework(homework: Omit<Homework, 'id' | 'created_at' | 'updated_at'>): Promise<Homework> {
+  return withRetry(async () => {
+    const { data, error } = await getSupabase()
+      .from('homework')
+      .insert({
+        user_id: homework.user_id,
+        subject: homework.subject,
+        description: homework.description,
+        due_date: homework.due_date,
+        priority: homework.priority,
+        status: homework.status,
+        notes: homework.notes || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Ошибка создания домашнего задания:', error);
+      throw new Error(getReadableError(error));
+    }
+
+    return data as unknown as Homework;
+  });
+}
+
+export async function updateHomework(id: string, updates: Partial<Homework>): Promise<Homework> {
+  return withRetry(async () => {
+    const { data, error } = await getSupabase()
+      .from('homework')
+      .update({
+        subject: updates.subject,
+        description: updates.description,
+        due_date: updates.due_date,
+        priority: updates.priority,
+        status: updates.status,
+        notes: updates.notes,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Ошибка обновления домашнего задания:', error);
+      throw new Error(getReadableError(error));
+    }
+
+    return data as unknown as Homework;
+  });
+}
+
+export async function deleteHomework(id: string): Promise<void> {
+  return withRetry(async () => {
+    const { error } = await getSupabase()
+      .from('homework')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Ошибка удаления домашнего задания:', error);
+      throw new Error(getReadableError(error));
+    }
+  });
+}
+
+// =============================================
 // Realtime
 // =============================================
 
@@ -328,6 +412,28 @@ export function subscribeToAttendance(userId: string, callback: (payload: { even
           eventType: payload.eventType,
           new: payload.new as unknown as AttendanceRecord,
           old: payload.old as unknown as AttendanceRecord,
+        });
+      }
+    )
+    .subscribe();
+}
+
+export function subscribeToHomework(userId: string, callback: (payload: { eventType: string; new: Homework; old: Homework }) => void) {
+  return getSupabase()
+    .channel('homework-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'homework',
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        callback({
+          eventType: payload.eventType,
+          new: payload.new as unknown as Homework,
+          old: payload.old as unknown as Homework,
         });
       }
     )

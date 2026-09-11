@@ -57,3 +57,19 @@ export interface UndoAction {
   previousRecord: AttendanceRecord | null;
   timeoutId: ReturnType<typeof setTimeout>;
 }
+
+export type HomeworkPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type HomeworkStatus = 'pending' | 'in_progress' | 'completed';
+
+export interface Homework {
+  id: string;
+  user_id: string;
+  subject: string;
+  description: string;
+  due_date: string; // YYYY-MM-DD
+  priority: HomeworkPriority;
+  status: HomeworkStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}

@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useAttendanceStore } from './store/attendanceStore';
+import { useHomeworkStore } from './store/homeworkStore';
 import { isSupabaseConfigured } from './lib/supabase';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/LoginPage';
@@ -9,6 +10,7 @@ import { CalendarPage } from './pages/CalendarPage';
 import { StatsPage } from './pages/StatsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ConnectPage } from './pages/ConnectPage';
+import { HomeworkPage } from './pages/HomeworkPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
@@ -34,12 +36,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AttendanceLoader({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
   const { fetchRecords } = useAttendanceStore();
+  const { fetchHomework } = useHomeworkStore();
 
   useEffect(() => {
     if (user) {
       fetchRecords(user.id);
+      fetchHomework(user.id);
     }
-  }, [user, fetchRecords]);
+  }, [user, fetchRecords, fetchHomework]);
 
   return <>{children}</>;
 }
@@ -83,6 +87,7 @@ function App() {
               }
             >
               <Route index element={<CalendarPage />} />
+              <Route path="homework" element={<HomeworkPage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>

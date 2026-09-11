@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GraduationCap, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, AlertCircle, Code2 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import { cn } from '../lib/utils';
 
 export function LoginPage() {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -174,6 +176,22 @@ export function LoginPage() {
             </button>
           </div>
         </motion.form>
+
+        {/* Кнопка для разработчиков */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-6 text-center"
+        >
+          <button
+            onClick={() => navigate('/connect')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Code2 size={16} />
+            Для разработчиков
+          </button>
+        </motion.div>
       </motion.div>
     </div>
   );

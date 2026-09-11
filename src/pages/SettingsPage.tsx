@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Moon, Sun, User, Save, AlertCircle } from 'lucide-react';
+import { Moon, Sun, User, Save, AlertCircle, Database } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import { cn } from '../lib/utils';
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useThemeStore();
   const { user, updateProfile } = useAuthStore();
 
@@ -184,6 +186,27 @@ export function SettingsPage() {
         <Save size={16} className="mr-2" />
         {saved ? 'Сохранено ✓' : 'Сохранить изменения'}
       </Button>
+
+      {/* Supabase Connection */}
+      <motion.div
+        className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Database size={20} className="text-green-500" />
+            <div>
+              <p className="font-medium text-slate-900 dark:text-white">Подключение к Supabase</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Изменить URL и ключ</p>
+            </div>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/connect')}>
+            Настроить
+          </Button>
+        </div>
+      </motion.div>
     </div>
   );
 }

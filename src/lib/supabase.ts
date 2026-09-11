@@ -146,6 +146,15 @@ export async function getCurrentProfile(): Promise<UserProfile | null> {
   const user = authResult.data.user;
   if (!user) return null;
 
+  // Пробуем через RPC функцию (обходит RLS)
+  const { data: rpcData, error: rpcError } = await getSupabase()
+    .rpc('get_profile_rpc');
+
+  if (!rpcError && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
+    return rpcData[0] as unknown as UserProfile;
+  }
+
+  // Fallback на прямой запрос
   const profileResult = await getSupabase()
     .from('profiles')
     .select('*')
@@ -197,6 +206,20 @@ export async function createProfile(userId: string, email: string, fullName: str
 }
 
 export async function updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
+  // Пробуем через RPC функцию (обходит RLS)
+  const { error: rpcError } = await getSupabase().rpc('update_profile_rpc', {
+    p_full_name: updates.full_name || '',
+    p_group_name: updates.group_name || '',
+    p_threshold: updates.admission_threshold || 75,
+  });
+
+  if (!rpcError) {
+    // Получаем обновлённый профиль
+    const profile = await getCurrentProfile();
+    if (profile) return profile;
+  }
+
+  // Fallback на прямой запрос
   const { data, error } = await getSupabase()
     .from('profiles')
     .update({
@@ -345,11 +368,14 @@ function getReadableError(error: { message: string; code?: string; status?: numb
   if (msg.includes('duplicate') || error.code === '23505') {
     return 'Запись уже существует';
   }
-  if (msg.includes('row-level security') || msg.includes('rls')) {
-    return 'Нет доступа. Проверьте настройки RLS в Supabase';
+  if (msg.includes('row-level security') || msg.includes('rls') || error.code === '42501') {
+    return 'Ошибка RLS. Выполните SQL миграцию из файла supabase/migrations/002_fix_rls.sql в Supabase SQL Editor';
   }
   if (msg.includes('relation') && msg.includes('does not exist')) {
-    return 'Таблица не найдена. Выполните SQL миграцию';
+    return 'Таблица или функция не найдена. Выполните SQL миграцию из supabase/migrations/';
+  }
+  if (msg.includes('function') && msg.includes('does not exist')) {
+    return 'RPC функция не найдена. Выполните SQL миграцию из файла supabase/migrations/002_fix_rls.sql';
   }
   if (msg.includes('invalid') && msg.includes('email')) {
     return 'Некорректный email';

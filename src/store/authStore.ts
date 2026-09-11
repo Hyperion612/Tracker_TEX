@@ -120,10 +120,10 @@ function getReadableAuthError(error: { message: string; status?: number }): stri
     return 'Неверный email или пароль';
   }
   if (msg.includes('email not confirmed')) {
-    return 'Email не подтверждён. Проверьте почту';
+    return 'Email не подтверждён. Отключите подтверждение в Authentication → Providers → Email';
   }
-  if (msg.includes('database error')) {
-    return 'Ошибка базы данных. Проверьте SQL миграцию';
+  if (msg.includes('database error') || msg.includes('row-level security') || msg.includes('42501')) {
+    return 'Ошибка базы данных. Выполните SQL миграцию из файла supabase/migrations/002_fix_rls.sql';
   }
   if (msg.includes('password')) {
     return 'Пароль должен быть не менее 6 символов';

@@ -175,6 +175,21 @@ CREATE TRIGGER update_attendance_updated_at
 -- Realtime подписки
 -- ============================================
 
--- Удаляем старую публикацию если есть
-ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS attendance;
-ALTER PUBLICATION supabase_realtime ADD TABLE attendance;
+-- Включаем Realtime для таблицы attendance
+-- (выполняем через DO-блок, т.к. ALTER PUBLICATION не поддерживает IF EXISTS)
+DO $$
+BEGIN
+  -- Пытаемся удалить таблицу из публикации (если она там есть)
+  BEGIN
+    ALTER PUBLICATION supabase_realtime DROP TABLE attendance;
+  EXCEPTION
+    WHEN OTHERS THEN NULL; -- Игнорируем ошибку если таблицы нет в публикации
+  END;
+  
+  -- Добавляем таблицу в публикацию
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE attendance;
+  EXCEPTION
+    WHEN OTHERS THEN NULL; -- Игнорируем ошибку если таблица уже добавлена
+  END;
+END $$;

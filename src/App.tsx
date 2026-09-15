@@ -11,6 +11,7 @@ import { StatsPage } from './pages/StatsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ConnectPage } from './pages/ConnectPage';
 import { HomeworkPage } from './pages/HomeworkPage';
+import { NotificationToast } from './components/ui/NotificationToast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuthStore();
@@ -60,6 +61,7 @@ function App() {
 
   return (
     <HashRouter>
+      <NotificationToast />
       <Routes>
         {/* Страница подключения — всегда доступна */}
         <Route path="/connect" element={<ConnectPage />} />

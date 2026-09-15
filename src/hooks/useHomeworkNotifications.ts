@@ -1,27 +1,34 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useHomeworkStore } from '../store/homeworkStore';
+import { useNotificationStore } from '../store/notificationStore';
 
 export function useHomeworkNotifications() {
   const { homework } = useHomeworkStore();
+  const { addNotification } = useNotificationStore();
+  const notifiedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    // Проверяем поддержку уведомлений
-    if (!('Notification' in window)) {
-      console.log('Браузер не поддерживает уведомления');
-      return;
-    }
-
-    // Запрашиваем разрешение на уведомления
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
-    // Проверяем домашние задания каждые 5 минут
     const checkHomework = () => {
-      if (Notification.permission !== 'granted') return;
-
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+      // Уведомления о просроченных заданиях
+      const overdueHomework = homework.filter(
+        (h) => h.due_date < today && h.status !== 'completed'
+      );
+
+      if (overdueHomework.length > 0) {
+        const key = `overdue-${overdueHomework.length}`;
+        if (!notifiedRef.current.has(key)) {
+          notifiedRef.current.add(key);
+          addNotification({
+            type: 'error',
+            title: '⚠️ Просроченные задания',
+            message: `У вас ${overdueHomework.length} просроченных домашних заданий`,
+            duration: 7000,
+          });
+        }
+      }
 
       // Уведомления о заданиях на сегодня
       const todayHomework = homework.filter(
@@ -29,12 +36,17 @@ export function useHomeworkNotifications() {
       );
 
       if (todayHomework.length > 0) {
-        const subjects = todayHomework.map((h) => h.subject).join(', ');
-        new Notification('📚 Домашнее задание на сегодня', {
-          body: `Не забудьте выполнить: ${subjects}`,
-          icon: '/favicon.ico',
-          tag: 'homework-today',
-        });
+        const key = `today-${todayHomework.map(h => h.id).join(',')}`;
+        if (!notifiedRef.current.has(key)) {
+          notifiedRef.current.add(key);
+          const subjects = todayHomework.map((h) => h.subject).join(', ');
+          addNotification({
+            type: 'warning',
+            title: '📚 Домашнее задание на сегодня',
+            message: `Не забудьте выполнить: ${subjects}`,
+            duration: 7000,
+          });
+        }
       }
 
       // Уведомления о заданиях на завтра
@@ -43,25 +55,17 @@ export function useHomeworkNotifications() {
       );
 
       if (tomorrowHomework.length > 0) {
-        const subjects = tomorrowHomework.map((h) => h.subject).join(', ');
-        new Notification('📅 Домашнее задание на завтра', {
-          body: `Завтра нужно сдать: ${subjects}`,
-          icon: '/favicon.ico',
-          tag: 'homework-tomorrow',
-        });
-      }
-
-      // Уведомления о просроченных заданиях
-      const overdueHomework = homework.filter(
-        (h) => h.due_date < today && h.status !== 'completed'
-      );
-
-      if (overdueHomework.length > 0) {
-        new Notification('⚠️ Просроченные домашние задания', {
-          body: `У вас ${overdueHomework.length} просроченных заданий`,
-          icon: '/favicon.ico',
-          tag: 'homework-overdue',
-        });
+        const key = `tomorrow-${tomorrowHomework.map(h => h.id).join(',')}`;
+        if (!notifiedRef.current.has(key)) {
+          notifiedRef.current.add(key);
+          const subjects = tomorrowHomework.map((h) => h.subject).join(', ');
+          addNotification({
+            type: 'info',
+            title: '📅 Домашнее задание на завтра',
+            message: `Завтра нужно сдать: ${subjects}`,
+            duration: 7000,
+          });
+        }
       }
     };
 
@@ -72,5 +76,5 @@ export function useHomeworkNotifications() {
     const interval = setInterval(checkHomework, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [homework]);
+  }, [homework, addNotification]);
 }

@@ -15,6 +15,11 @@ interface CalendarProps {
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
+// Проверка на воскресенье (выходной)
+function isSunday(date: Date): boolean {
+  return date.getDay() === 0;
+}
+
 export function Calendar({ onDayClick }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('month');
@@ -51,6 +56,9 @@ export function Calendar({ onDayClick }: CalendarProps) {
   };
 
   const handleDayClick = (date: Date) => {
+    // Воскресенье — выходной, не обрабатываем клик
+    if (isSunday(date)) return;
+    
     const dateStr = format(date, 'yyyy-MM-dd');
     if (selectedDates.length > 0) {
       toggleDateSelection(dateStr);
@@ -60,6 +68,9 @@ export function Calendar({ onDayClick }: CalendarProps) {
   };
 
   const handleDayLongPress = (date: Date) => {
+    // Воскресенье — выходной, не обрабатываем
+    if (isSunday(date)) return;
+    
     const dateStr = format(date, 'yyyy-MM-dd');
     toggleDateSelection(dateStr);
   };
@@ -151,8 +162,14 @@ export function Calendar({ onDayClick }: CalendarProps) {
 
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-1 md:gap-2">
-        {WEEKDAYS.map((day) => (
-          <div key={day} className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 py-2">
+        {WEEKDAYS.map((day, index) => (
+          <div 
+            key={day} 
+            className={cn(
+              'text-center text-xs font-medium py-2',
+              index === 6 ? 'text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'
+            )}
+          >
             {day}
           </div>
         ))}
@@ -177,40 +194,53 @@ export function Calendar({ onDayClick }: CalendarProps) {
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isTodayDate = isToday(day);
           const isSelected = selectedDates.includes(dateStr);
+          const isWeekend = isSunday(day);
 
           return (
             <motion.button
               key={dateStr}
               onClick={() => handleDayClick(day)}
               onDoubleClick={() => handleDayLongPress(day)}
+              disabled={isWeekend}
               className={cn(
                 'relative aspect-square rounded-2xl flex flex-col items-center justify-center transition-all duration-200',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
-                'hover:scale-105 active:scale-95',
                 view === 'week' ? 'min-h-[100px]' : '',
+                !isWeekend && 'hover:scale-105 active:scale-95',
                 !isCurrentMonth && 'opacity-30',
-                isSelected && 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30',
-                !isSelected && !record && 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
-                isTodayDate && !isSelected && !record && 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
+                // Воскресенье — выходной
+                isWeekend && 'bg-slate-100 dark:bg-slate-800/50 cursor-not-allowed opacity-60',
+                // Обычные дни
+                !isWeekend && isSelected && 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/30',
+                !isWeekend && !isSelected && !record && 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
+                !isWeekend && isTodayDate && !isSelected && !record && 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700'
               )}
-              whileTap={{ scale: 0.95 }}
+              whileTap={isWeekend ? {} : { scale: 0.95 }}
             >
               <span className={cn(
                 'text-sm font-medium',
-                isTodayDate ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300',
+                isWeekend && 'text-red-500 dark:text-red-400',
+                !isWeekend && isTodayDate && 'text-blue-600 dark:text-blue-400',
+                !isWeekend && !isTodayDate && 'text-slate-700 dark:text-slate-300',
                 !isCurrentMonth && 'text-slate-400'
               )}>
                 {format(day, 'd')}
               </span>
 
-              {record && (
+              {isWeekend && (
+                <span className="text-[9px] text-red-400 dark:text-red-500 mt-0.5">
+                  выходной
+                </span>
+              )}
+
+              {!isWeekend && record && (
                 <div className={cn(
                   'w-2 h-2 md:w-2.5 md:h-2.5 rounded-full mt-1',
                   getStatusColor(record.status)
                 )} />
               )}
 
-              {record?.status === 'late' && record.late_minutes && (
+              {!isWeekend && record?.status === 'late' && record.late_minutes && (
                 <span className="text-[9px] text-yellow-600 dark:text-yellow-400 mt-0.5">
                   +{record.late_minutes}м
                 </span>
@@ -237,6 +267,10 @@ export function Calendar({ onDayClick }: CalendarProps) {
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600" />
           <span className="text-xs text-slate-600 dark:text-slate-400">Не отмечено</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600" />
+          <span className="text-xs text-slate-600 dark:text-slate-400">Выходной</span>
         </div>
       </div>
     </div>

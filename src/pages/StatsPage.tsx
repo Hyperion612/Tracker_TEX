@@ -17,12 +17,13 @@ function useStats(): AttendanceStats {
     const startOfYear = new Date(now.getFullYear(), 0, 1);
     const today = new Date();
 
-    // Count working days (Mon-Fri) from start of year to today
+    // Count working days (Mon-Sat, excluding Sunday) from start of year to today
     let totalDays = 0;
     const current = new Date(startOfYear);
     while (current <= today) {
       const dayOfWeek = current.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) totalDays++;
+      // 0 = Sunday (выходной), 6 = Saturday (рабочий)
+      if (dayOfWeek !== 0) totalDays++;
       current.setDate(current.getDate() + 1);
     }
 
@@ -34,7 +35,7 @@ function useStats(): AttendanceStats {
 
     const attendanceRate = totalDays > 0 ? Math.round(((presentDays + lateDays) / totalDays) * 100) : 0;
 
-    // Calculate streaks
+    // Calculate streaks (excluding Sundays)
     let currentStreak = 0;
     let longestStreak = 0;
     let tempStreak = 0;
@@ -50,6 +51,8 @@ function useStats(): AttendanceStats {
         const prevDate = new Date(sortedRecords[i - 1].date);
         const currDate = new Date(sortedRecords[i].date);
         const diffDays = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+        // Учитываем что между записями может быть воскресенье (выходной)
+        // Поэтому разрешаем разрыв до 2 дней
         if (diffDays <= 2) {
           tempStreak++;
         } else {

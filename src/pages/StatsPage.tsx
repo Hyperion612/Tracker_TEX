@@ -35,7 +35,7 @@ function useStats(): AttendanceStats {
 
     const attendanceRate = totalDays > 0 ? Math.round(((presentDays + lateDays) / totalDays) * 100) : 0;
 
-    // Calculate streaks (excluding Sundays)
+    // Calculate streaks (excluding Sundays - они не прерывают серию)
     let currentStreak = 0;
     let longestStreak = 0;
     let tempStreak = 0;
@@ -44,16 +44,35 @@ function useStats(): AttendanceStats {
       .filter(r => r.status === 'present' || r.status === 'late')
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    // Функция для подсчёта рабочих дней между двумя датами
+    const countWorkingDaysBetween = (startDate: Date, endDate: Date): number => {
+      let count = 0;
+      const current = new Date(startDate);
+      current.setDate(current.getDate() + 1); // Начинаем со следующего дня
+      
+      while (current < endDate) {
+        // 0 = воскресенье (выходной), не считаем
+        if (current.getDay() !== 0) {
+          count++;
+        }
+        current.setDate(current.getDate() + 1);
+      }
+      return count;
+    };
+
     for (let i = 0; i < sortedRecords.length; i++) {
       if (i === 0) {
         tempStreak = 1;
       } else {
         const prevDate = new Date(sortedRecords[i - 1].date);
         const currDate = new Date(sortedRecords[i].date);
-        const diffDays = (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
-        // Учитываем что между записями может быть воскресенье (выходной)
-        // Поэтому разрешаем разрыв до 2 дней
-        if (diffDays <= 2) {
+        
+        // Считаем сколько рабочих дней пропущено между записями
+        const missedWorkingDays = countWorkingDaysBetween(prevDate, currDate);
+        
+        // Если нет пропущенных рабочих дней - серия продолжается
+        // Если есть пропущенные рабочие дни - серия прервана
+        if (missedWorkingDays === 0) {
           tempStreak++;
         } else {
           tempStreak = 1;
@@ -62,16 +81,29 @@ function useStats(): AttendanceStats {
       longestStreak = Math.max(longestStreak, tempStreak);
     }
 
-    // Current streak (from today backwards)
-    const todayStr = today.toISOString().split('T')[0];
+    // Current streak (from today backwards, skipping Sundays)
     let checkDate = new Date(today);
+    
+    // Если сегодня воскресенье - начинаем с субботы
+    if (checkDate.getDay() === 0) {
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    
     while (true) {
+      // Пропускаем воскресенья (они не прерывают серию)
+      if (checkDate.getDay() === 0) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        continue;
+      }
+      
       const dateStr = checkDate.toISOString().split('T')[0];
       const record = records.find(r => r.date === dateStr);
+      
       if (record && (record.status === 'present' || record.status === 'late')) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
       } else {
+        // Рабочий день без записи - серия прервана
         break;
       }
     }

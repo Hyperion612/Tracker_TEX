@@ -73,3 +73,21 @@ export interface Homework {
   created_at: string;
   updated_at: string;
 }
+
+export type DayOfWeek = 1 | 2 | 3 | 4 | 5 | 6 | 7; // 1=Пн, 7=Вс
+export type WeekType = 'every' | 'odd' | 'even';
+
+export interface ScheduleItem {
+  id: string;
+  user_id: string;
+  day_of_week: DayOfWeek;
+  start_time: string; // HH:MM
+  end_time: string; // HH:MM
+  subject: string;
+  teacher?: string | null;
+  room?: string | null;
+  notes?: string | null;
+  week_type: WeekType;
+  created_at: string;
+  updated_at: string;
+}

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useAttendanceStore } from './store/attendanceStore';
 import { useHomeworkStore } from './store/homeworkStore';
+import { useScheduleStore } from './store/scheduleStore';
 import { isSupabaseConfigured } from './lib/supabase';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/LoginPage';
@@ -11,6 +12,7 @@ import { StatsPage } from './pages/StatsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ConnectPage } from './pages/ConnectPage';
 import { HomeworkPage } from './pages/HomeworkPage';
+import { SchedulePage } from './pages/SchedulePage';
 import { NotificationToast } from './components/ui/NotificationToast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -38,13 +40,15 @@ function AttendanceLoader({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
   const { fetchRecords } = useAttendanceStore();
   const { fetchHomework } = useHomeworkStore();
+  const { fetchSchedule } = useScheduleStore();
 
   useEffect(() => {
     if (user) {
       fetchRecords(user.id);
       fetchHomework(user.id);
+      fetchSchedule(user.id);
     }
-  }, [user, fetchRecords, fetchHomework]);
+  }, [user, fetchRecords, fetchHomework, fetchSchedule]);
 
   return <>{children}</>;
 }
@@ -90,6 +94,7 @@ function App() {
             >
               <Route index element={<CalendarPage />} />
               <Route path="homework" element={<HomeworkPage />} />
+              <Route path="schedule" element={<SchedulePage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>

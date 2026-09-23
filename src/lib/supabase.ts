@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { AttendanceRecord, UserProfile, AbsenceReasonItem, Homework } from '../types';
+import type { AttendanceRecord, UserProfile, AbsenceReasonItem, Homework, ScheduleItem } from '../types';
 
 // =============================================
 // Ключи localStorage для хранения настроек
@@ -387,6 +387,95 @@ export async function deleteHomework(id: string): Promise<void> {
 
     if (error) {
       console.error('Ошибка удаления домашнего задания:', error);
+      throw new Error(getReadableError(error));
+    }
+  });
+}
+
+// =============================================
+// Работа с расписанием
+// =============================================
+
+export async function getSchedule(userId: string): Promise<ScheduleItem[]> {
+  return withRetry(async () => {
+    const { data, error } = await getSupabase()
+      .from('schedule')
+      .select('*')
+      .eq('user_id', userId)
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
+
+    if (error) {
+      console.error('Ошибка загрузки расписания:', error);
+      return [];
+    }
+    return (data || []) as unknown as ScheduleItem[];
+  });
+}
+
+export async function createScheduleItem(item: Omit<ScheduleItem, 'id' | 'created_at' | 'updated_at'>): Promise<ScheduleItem> {
+  return withRetry(async () => {
+    const { data, error } = await getSupabase()
+      .from('schedule')
+      .insert({
+        user_id: item.user_id,
+        day_of_week: item.day_of_week,
+        start_time: item.start_time,
+        end_time: item.end_time,
+        subject: item.subject,
+        teacher: item.teacher || null,
+        room: item.room || null,
+        notes: item.notes || null,
+        week_type: item.week_type,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Ошибка создания пары:', error);
+      throw new Error(getReadableError(error));
+    }
+
+    return data as unknown as ScheduleItem;
+  });
+}
+
+export async function updateScheduleItem(id: string, updates: Partial<ScheduleItem>): Promise<ScheduleItem> {
+  return withRetry(async () => {
+    const { data, error } = await getSupabase()
+      .from('schedule')
+      .update({
+        day_of_week: updates.day_of_week,
+        start_time: updates.start_time,
+        end_time: updates.end_time,
+        subject: updates.subject,
+        teacher: updates.teacher,
+        room: updates.room,
+        notes: updates.notes,
+        week_type: updates.week_type,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Ошибка обновления пары:', error);
+      throw new Error(getReadableError(error));
+    }
+
+    return data as unknown as ScheduleItem;
+  });
+}
+
+export async function deleteScheduleItem(id: string): Promise<void> {
+  return withRetry(async () => {
+    const { error } = await getSupabase()
+      .from('schedule')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Ошибка удаления пары:', error);
       throw new Error(getReadableError(error));
     }
   });

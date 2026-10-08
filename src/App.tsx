@@ -13,6 +13,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ConnectPage } from './pages/ConnectPage';
 import { HomeworkPage } from './pages/HomeworkPage';
 import { SchedulePage } from './pages/SchedulePage';
+import { NotificationSettingsPage } from './pages/NotificationSettingsPage';
 import { NotificationToast } from './components/ui/NotificationToast';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -97,6 +98,7 @@ function App() {
               <Route path="schedule" element={<SchedulePage />} />
               <Route path="stats" element={<StatsPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="notifications" element={<NotificationSettingsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </>

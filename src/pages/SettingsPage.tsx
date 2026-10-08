@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Moon, Sun, User, Save, AlertCircle, Database } from 'lucide-react';
+import { Moon, Sun, User, Save, AlertCircle, Database, Bell } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
@@ -203,6 +203,27 @@ export function SettingsPage() {
             </div>
           </div>
           <Button variant="secondary" size="sm" onClick={() => navigate('/connect')}>
+            Настроить
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Notification Settings */}
+      <motion.div
+        className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Bell size={20} className="text-blue-500" />
+            <div>
+              <p className="font-medium text-slate-900 dark:text-white">Уведомления</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Push и Email напоминания</p>
+            </div>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/notifications')}>
             Настроить
           </Button>
         </div>

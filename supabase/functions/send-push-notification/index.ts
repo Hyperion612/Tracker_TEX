@@ -15,11 +15,33 @@ serve(async (req) => {
   }
 
   try {
-    const { user_id, title, body, url } = await req.json()
+    // Безопасное чтение тела запроса
+    let requestBody: any = {}
+    try {
+      const text = await req.text()
+      if (text && text.trim()) {
+        requestBody = JSON.parse(text)
+      }
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          hint: 'Request body must be valid JSON with user_id field'
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      )
+    }
+
+    const { user_id, title, body, url } = requestBody
 
     if (!user_id) {
       return new Response(
-        JSON.stringify({ error: 'user_id is required' }),
+        JSON.stringify({ 
+          error: 'user_id is required',
+          received: requestBody,
+          hint: 'Request must include user_id (string)'
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
       )
     }

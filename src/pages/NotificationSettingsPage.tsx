@@ -135,13 +135,30 @@ export function NotificationSettingsPage() {
   const handleTestEmail = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        addNotification({
+          type: 'error',
+          title: 'Ошибка',
+          message: 'Пользователь не авторизован',
+        });
+        return;
+      }
 
-      const { error } = await supabase.functions.invoke('send-notification', {
-        body: { type: 'homework_reminder', user_id: user.id },
+      console.log('Sending test email for user:', user.id);
+      console.log('Request body:', { type: 'homework_reminder', user_id: user.id });
+
+      const { data, error } = await supabase.functions.invoke('send-notification', {
+        body: { 
+          type: 'homework_reminder', 
+          user_id: user.id 
+        },
       });
 
-      if (error) throw error;
+      console.log('Email function response:', { data, error });
+
+      if (error) {
+        throw new Error(typeof error === 'string' ? error : JSON.stringify(error));
+      }
 
       addNotification({
         type: 'success',
@@ -153,7 +170,7 @@ export function NotificationSettingsPage() {
       addNotification({
         type: 'error',
         title: 'Ошибка',
-        message: 'Не удалось отправить тестовое email',
+        message: error instanceof Error ? error.message : 'Не удалось отправить тестовое email',
       });
     }
   };
